@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% if request.user.is_superuser %}
+        {% for hall in cinema_halls %}
+            <p>{{ hall.name }}</p>
+            <p>{{ hall.author }}</p>
+            <p>{{ hall.created_on }}</p>
+            <p>{{ hall.seats }}</p>
+            <p>{{ hall.updated_on }}</p>
+            <hr>
+
+        {% endfor %}
+    {% endif %}
+
+
+
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block content %}
+`
+  <form action="." method="get">
+    <p><select name="sort">
+        <option disabled selected value>Choose time</option>
+        <option value ="time_from">--></option>
+        <option value ="-time_from"><--</option>
+    </select></p>
+
+    <p><select name="sort" >
+        <option disabled selected value>Choose price</option>
+        <option value ="price">Starts with the lowest</option>
+        <option value ="-price">Starts with the highest</option>
+    </select></p>
+      <button type="submit" class="btn btn-sm btn-primary btn-raised mr-3">Sort</button>
+    </form>
+{#        <p>{{ request.user }}</p>#}
+
+        <hr>
+
+    <div>
+        {% for session in sessions %}
+            <p>{{ session.film.name }}</p>
+            <p>{{ session.hall }}</p>
+            <p>{{ session.available_seats }}</p>
+            <p>{{ session.price }}</p>
+            <p>{{ session.time_from }}</p>
+            <p>{{ session.time_to }}</p>
+            <hr>
+
+            {% if request.user.is_superuser %}
+                <a style="color: red" href={% url 'update_session' session.id %}>Update this session</a>
+            {% endif %}
+            {% if request.user.is_authenticated %}
+            <form action="{% url 'buy_ticket' session.id %}" method="post">
+                {% csrf_token  %}
+                {{ amount }}
+                <input type="submit" value="buy">
+
+                </form>
+            {% endif %}
+
+
+{#            {% if request.user.is_authenticated %}#}
+{#                    <form action="{% url 'tickets:ticket-create' %}" method="post">#}
+{##}
+{#                        {% csrf_token %}#}
+{##}
+{#                        <input type="hidden" name="session_id" value="{{ session.id }}">#}
+{##}
+{#                        <input type="number" min="0" name="quantity" value="1">#}
+{##}
+{#                        <input type="submit" value="Buy" class="btn btn-primary">#}
+{##}
+{#                    </form>#}
+{##}
+{#                {% endif %}#}
+
+        {% endfor %}
+
+
+    </div>
+{% endblock %}

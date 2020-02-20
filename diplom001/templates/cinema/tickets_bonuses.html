@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <p>Welcome
+    {% for i in user_info %}
+        {{ i.first_name }}
+        {{ i.last_name }}.
+        <p>There have {{ i.bonuses }} bonuses left in your account.</p>
+        <p>You've spent {{ i.total_bonuses }} bonuses</p>
+    {% endfor %}
+    <hr>
+    </p>
+
+    {% for ticket in tickets %}
+       <p>{{ ticket.session.film }}</p>
+       <p>{{ ticket.amount }}</p>
+       <p>{{ ticket.session.price }}</p>
+       <p>{{ ticket.session.time_from.date }}</p>
+        <p>{{ ticket.session.time_from.time }}</p>
+       <hr>
+    {% endfor %}
+
+
+{% endblock %}

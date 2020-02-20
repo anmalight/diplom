@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% if request.user.is_superuser %}
+        {% for movie in movies %}
+            <p>{{ movie.name }}</p>
+            <p>{{ movie.info }}</p>
+            <p>{{ movie.display_date_start }}</p>
+            <p>{{ movie.display_date_end }}</p>
+            <hr>
+
+        {% endfor %}
+    {% endif %}
+
+
+
+{% endblock %}

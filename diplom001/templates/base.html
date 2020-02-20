@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple text</title>
+    <link rel="stylesheet"
+          href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+          integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+          crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js"
+            integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+            crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/ui/1.11.3/jquery-ui.min.js"
+            integrity="sha256-xI/qyl9vpwWFOXz7+x/9WkG5j/SVnSw21viy8fWwbeE="
+            crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+</head>
+<body>
+<nav class="navbar navbar-dark bg-primary navbar-expand-lg">
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+            </li>
+        </ul>
+
+        <ul class="navbar-nav ml-auto">
+            {% if not request.user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'login' %}">Sign In</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'register' %}">Sign Up</a>
+                </li>
+            {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'logout' %}">Sign Off</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'session-list' %}">Main page</a>
+                </li>
+                <li>
+                    <a class="nav-link" href="{% url 'tickets_bonuses_list' %}">Purchases</a>
+                </li>
+
+            {% endif %}
+        </ul>
+
+        <ul>
+            {% if request.user.is_superuser %}
+                <a style="color: red" href={% url 'add_movie' %}>Add new movie | </a>
+                <a style="color: red" href={% url 'add_hall' %}>Add new hall | </a>
+                <a style="color: red" href={% url 'add_session' %}> Add new movie session</a>
+            {% endif %}
+        </ul>
+
+        <ul>
+            {% if request.user.is_superuser %}
+                <a style="color: red" href={% url 'movie_list' %}>Movie(s) list | </a>
+                <a style="color: red" href={% url 'hall_list' %}>Hall(s) list</a>
+            {% endif %}
+        </ul>
+
+    </div>
+</nav>
+{% block content %}
+{% endblock %}
+
+</body>
+</html>
+{% block scripts %}
+{% endblock %}
