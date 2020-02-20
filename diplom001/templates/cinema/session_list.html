@@ -21,6 +21,9 @@
         <hr>
 
     <div>
+        <p><a href="{% url 'session-list-today' %}">Session list for the next 24 hours</a></p>
+        <p><a href="{% url 'session-list-tomorrow' %}">Session list for tomorrow</a></p>
+        <hr>
         {% for session in sessions %}
             <p>{{ session.film.name }}</p>
             <p>{{ session.hall }}</p>

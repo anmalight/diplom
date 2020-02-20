@@ -146,10 +146,19 @@ class MovieSessionsListView(ListView):
         context = super().get_context_data(object_list=object_list, **kwargs)
         now = timezone.now()
         # on main page all sessions for the future
-        today = MovieSession.objects.filter(time_from__gte=now).order_by('time_from')
+        today = MovieSession.objects.filter(time_from__gte=now)
         context.update({'amount': AmountForm,
                         'sessions': today})
         return context
+
+    # def get_context_data(self, *, object_list=None, **kwargs):
+    #     context = super().get_context_data(object_list=object_list, **kwargs)
+    #     now = timezone.now()
+    #     # on main page all sessions for the future
+    #     today = MovieSession.objects.all()#filter(time_from__gte=now).order_by('time_from')
+    #     context.update({'amount': AmountForm,
+    #                     'sessions': today})
+    #     return context
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -159,21 +168,32 @@ class MovieSessionsListView(ListView):
         return queryset
 
 
-class MovieSessionsListViewTomorrow(MovieSessionsListView):
+class MovieSessionsListViewToday(MovieSessionsListView):
 
-    """ Only sessions for tomorrow"""
+    """ Only sessions for current 24 hours"""
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(object_list=object_list, **kwargs)
-        this_day = timezone.now()
-        next_day = this_day + timezone.timedelta(days=1)
+        now = timezone.now()
+        next_day = now + timezone.timedelta(days=1)
 
-        # this_day_start = timezone.(today, time())
-        # # today_end = datetime.combine(tomorrow, time())
+        today = MovieSession.objects.filter(time_from__gte=now).filter(time_from__lte=next_day).order_by('time_from')
+        context.update({'amount': AmountForm,
+                        'sessions': today})
+        return context
 
-        # queryset = KleedkamerIndeling.objects.order_by('-gametimedate').filter(gametimedate__gte=today_start).filter(gametimedate__lt=today_end)
-        # .objects.filter(datetime_published=datetime(2008, 03, 27))
-        today = MovieSession.objects.filter(time_from=next_day)
+
+
+class MovieSessionsListViewTomorrow(MovieSessionsListView):
+
+    """ Only sessions for current 24 hours"""
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(object_list=object_list, **kwargs)
+        now = timezone.now() + timezone.timedelta(days=1)
+        next_day = now + timezone.timedelta(days=1)
+
+        today = MovieSession.objects.filter(time_from__gte=now).filter(time_from__lte=next_day).order_by('time_from')
         context.update({'amount': AmountForm,
                         'sessions': today})
         return context

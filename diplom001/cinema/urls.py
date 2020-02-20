@@ -1,10 +1,12 @@
 from django.urls import path
 
 from cinema.views import MovieSessionsListView, FilmSessionsUpdateView, BuyTicketView, MovieCreateView, HallCreateView, \
-    SessionCreateView, MoviesListView, MovieSListView, BuyingList, MovieSessionsListViewTomorrow
+    SessionCreateView, MoviesListView, MovieSListView, BuyingList, MovieSessionsListViewTomorrow, \
+    MovieSessionsListViewToday
 
 urlpatterns = [
     path('', MovieSessionsListView.as_view(), name='session-list'),
+    path('today/', MovieSessionsListViewToday.as_view(), name='session-list-today'),
     path('tomorrow/', MovieSessionsListViewTomorrow.as_view(), name='session-list-tomorrow'),
 
     path('add_movie/', MovieCreateView.as_view(), name='add_movie'),
