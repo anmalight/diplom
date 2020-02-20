@@ -25,7 +25,7 @@ from cinema.api.serializers import GoodSerializer, UserSerializer, MovieSerializ
 class MovieViewApi(viewsets.ModelViewSet):
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
-    # permission_classes = [permissions.IsAuthenticated, IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsAdminUser]
 
 
 class MovieSessionViewApi(viewsets.ModelViewSet):
@@ -38,7 +38,7 @@ class MovieSessionViewApi(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         pass
 
-    def delete(self,  request, *args, **kwargs):
+    def destroy(self,  request, *args, **kwargs):
         pass
 
 
@@ -52,7 +52,7 @@ class CinemaHallViewApi(viewsets.ModelViewSet):
 class GoodViewSet(viewsets.ModelViewSet):
     queryset = MovieSession.objects.all()
     serializer_class = GoodSerializer
-    # permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     # def perform_create(self, serializer):
     #     print(self.request.user)
@@ -65,6 +65,8 @@ class GoodViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+
 
 
 # api_views end

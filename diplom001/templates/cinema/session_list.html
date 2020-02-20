@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
 
-{% block content %}
-`
-  <form action="." method="get">
+{% block content %}`
+    {% if request.user.is_authenticated %}
+    <p>Welcome {{ request.user }}!</p>
+    {% endif %}
+  <form action="" method="get">
     <p><select name="sort">
         <option disabled selected value>Choose time</option>
         <option value ="time_from">--></option>
@@ -14,9 +16,9 @@
         <option value ="price">Starts with the lowest</option>
         <option value ="-price">Starts with the highest</option>
     </select></p>
-      <button type="submit" class="btn btn-sm btn-primary btn-raised mr-3">Sort</button>
+      <button type="submit">Sort</button>
     </form>
-{#        <p>{{ request.user }}</p>#}
+
 
         <hr>
 
@@ -25,12 +27,12 @@
         <p><a href="{% url 'session-list-tomorrow' %}">Session list for tomorrow</a></p>
         <hr>
         {% for session in sessions %}
-            <p>{{ session.film.name }}</p>
-            <p>{{ session.hall }}</p>
-            <p>{{ session.available_seats }}</p>
-            <p>{{ session.price }}</p>
-            <p>{{ session.time_from }}</p>
-            <p>{{ session.time_to }}</p>
+            <p>Name: {{ session.film.name }}</p>
+            <p>Hall: {{ session.hall }}</p>
+            <p>Seats: {{ session.available_seats }}</p>
+            <p>Price: {{ session.price }}</p>
+            <p>From: {{ session.time_from }}</p>
+            <p>To: {{ session.time_to }}</p>
             <hr>
 
             {% if request.user.is_superuser %}
