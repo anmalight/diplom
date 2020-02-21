@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% if request.user.is_superuser %}
+        <form method="post">
+        {% csrf_token %}
+        {{ form }}
+        <input type="submit" value="Update this session">
+        </form>
+    {% else %}
+        <p>Access denied</p>
+    {% endif %}
+{% endblock %}
