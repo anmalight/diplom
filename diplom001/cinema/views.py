@@ -1,8 +1,9 @@
 import datetime
 
+import pytz
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone #
@@ -17,7 +18,7 @@ from cinema.models import MovieSession, Movie, CinemaHall, Ticket
 # Create your views here.
 from cinema.api.serializers import GoodSerializer, UserSerializer, MovieSerializer, MovieSessionSerializer, \
     CinemaHallSerializer
-
+from datetime import datetime
 
 # api_views start
 
@@ -27,32 +28,49 @@ class MovieViewApi(viewsets.ModelViewSet):
     serializer_class = MovieSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminUser]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        sort = self.request.GET.getlist('sort')
+        if sort:
+            queryset = queryset.order_by(*sort)
+        return queryset
+
+
+
+
+
 
 class MovieSessionViewApi(viewsets.ModelViewSet):
     queryset = MovieSession.objects.all()
     serializer_class = MovieSessionSerializer
 
-    def create(self, request, *args, **kwargs):
-        pass
 
-    def update(self, request, *args, **kwargs):
-        pass
+    def get_queryset(self):
+        time_end = datetime.datetime.strptime(self.request.GET.get('time_end'), "%H:%M:%S")
 
-    def destroy(self,  request, *args, **kwargs):
-        pass
+    # def create(self, request, *args, **kwargs):
+    #     pass
+    #
+    # def update(self, request, *args, **kwargs):
+    #     pass
+    #
+    # def destroy(self,  request, *args, **kwargs):
+    #     pass
 
 
 class CinemaHallViewApi(viewsets.ModelViewSet):
     queryset = CinemaHall.objects.all()
     serializer_class = CinemaHallSerializer
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
 
 
 class GoodViewSet(viewsets.ModelViewSet):
     queryset = MovieSession.objects.all()
     serializer_class = GoodSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    # permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+
 
     # def perform_create(self, serializer):
     #     print(self.request.user)
@@ -103,7 +121,7 @@ class HallCreateView(CreateView, LoginRequiredMixin):
 class SessionCreateView(CreateView, LoginRequiredMixin):
     form_class = AddMovieSessionForm
     http_method_names = ['get', 'post']
-    template_name = 'cinema/session_update.html'
+    template_name = 'cinema/session_create.html'
     login_url = 'authentication/login/'
     success_url = '/'
 
@@ -112,6 +130,29 @@ class SessionCreateView(CreateView, LoginRequiredMixin):
             return super().get(request, *args, **kwargs)
         else:
             raise PermissionDenied()
+
+    def form_valid(self, form):
+
+        local = pytz.timezone('Europe/Kiev')
+        start_from_form = (form.data['time_from'])
+        end_from_form = (form.data['time_to'])
+
+        start_new_session = local.localize(datetime.strptime(str(start_from_form), '%m/%d/%Y %H:%M:%S'))
+        end_new_session = local.localize(datetime.strptime(str(end_from_form), '%m/%d/%Y %H:%M:%S'))
+        if MovieSession.objects.all() and (MovieSession.objects.filter(hall=form.data['hall'])):
+            for obj in (MovieSession.objects.filter(hall=form.data['hall'])):
+                start_from_object = local.localize(datetime.strptime(str(obj.time_from), '%Y-%m-%d %H:%M:%S'))
+                end_from_object = local.localize(datetime.strptime(str(obj.time_to), '%Y-%m-%d %H:%M:%S'))
+
+                if ((start_new_session >= start_from_object) and (start_new_session <= end_from_object)) or (
+                        (end_new_session >= start_from_object) and (end_new_session <= end_from_object)):
+                    return HttpResponse('Not relevant data')
+                else:
+                    self.object = form.save()
+                    return super().form_valid(form)
+        else:
+            self.object = form.save()
+            return super().form_valid(form)
 
 
 class MoviesListView(ListView):
@@ -149,6 +190,9 @@ class MovieSessionsListView(ListView):
         now = timezone.now()
         # on main page all sessions for the future
         today = MovieSession.objects.filter(time_from__gte=now)
+        sort = self.request.GET.getlist('sort')
+        if sort:
+            today = today.order_by(*sort)
         context.update({'amount': AmountForm,
                         'sessions': today})
         return context
@@ -162,12 +206,12 @@ class MovieSessionsListView(ListView):
     #                     'sessions': today})
     #     return context
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        sort = self.request.GET.getlist('sort')
-        if sort:
-            queryset = queryset.order_by(*sort)
-        return queryset
+    # def get_queryset(self):
+    #     queryset = super().get_queryset()
+    #     sort = self.request.GET.getlist('sort')
+    #     if sort:
+    #         queryset = queryset.order_by(*sort)
+    #     return queryset
 
 
 class MovieSessionsListViewToday(MovieSessionsListView):
