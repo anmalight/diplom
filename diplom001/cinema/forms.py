@@ -1,4 +1,6 @@
 from django import forms
+from django.core.exceptions import ValidationError
+
 from cinema.models import MovieSession, Ticket, Movie, CinemaHall
 
 
@@ -9,6 +11,19 @@ class AddHallForm(forms.ModelForm):
 
 
 class AddMovieForm(forms.ModelForm):
+
+    # def clean(self):
+    #     super(AddMovieForm, self).clean()
+    #     error_message = ''
+    #     field = ''
+    #     # reusable check
+    #     if self.cleaned_data['reusable'] == 0:
+    #         error_message = 'reusable should not be zero'
+    #         field = 'reusable'
+    #         self.add_error(field, error_message)
+    #         raise ValidationError(error_message)
+
+        # return self.cleaned_data
     class Meta:
         model = Movie
         fields = ['name', 'info', 'poster', 'display_date_start', 'display_date_end']

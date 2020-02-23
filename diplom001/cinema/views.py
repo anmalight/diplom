@@ -6,9 +6,9 @@ from django.contrib import messages
 from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
-from django.utils import timezone #
+from django.utils import timezone  #
 from django.views.generic import ListView, CreateView, UpdateView, View
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, FieldError
 from rest_framework import viewsets, permissions
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
@@ -19,6 +19,7 @@ from cinema.models import MovieSession, Movie, CinemaHall, Ticket
 from cinema.api.serializers import GoodSerializer, UserSerializer, MovieSerializer, MovieSessionSerializer, \
     CinemaHallSerializer
 from datetime import datetime
+
 
 # api_views start
 
@@ -36,14 +37,9 @@ class MovieViewApi(viewsets.ModelViewSet):
         return queryset
 
 
-
-
-
-
 class MovieSessionViewApi(viewsets.ModelViewSet):
     queryset = MovieSession.objects.all()
     serializer_class = MovieSessionSerializer
-
 
     def get_queryset(self):
         time_end = datetime.datetime.strptime(self.request.GET.get('time_end'), "%H:%M:%S")
@@ -64,13 +60,10 @@ class CinemaHallViewApi(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
 
-
 class GoodViewSet(viewsets.ModelViewSet):
     queryset = MovieSession.objects.all()
     serializer_class = GoodSerializer
     # permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-
-
 
     # def perform_create(self, serializer):
     #     print(self.request.user)
@@ -83,8 +76,6 @@ class GoodViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-
-
 
 
 # api_views end
@@ -131,28 +122,27 @@ class SessionCreateView(CreateView, LoginRequiredMixin):
         else:
             raise PermissionDenied()
 
-    def form_valid(self, form):
-
+    def post(self, request, *args, **kwargs):
         local = pytz.timezone('Europe/Kiev')
-        start_from_form = (form.data['time_from'])
-        end_from_form = (form.data['time_to'])
+        film = Movie.objects.get(id=int(request.POST.get('film')))
+        hall = request.POST.get('hall')
+        hall_sessions = MovieSession.objects.filter(hall__id=int(hall))
+        start_from_form = (request.POST.get('time_from'))
+        end_from_form = (request.POST.get('time_to'))
 
         start_new_session = local.localize(datetime.strptime(str(start_from_form), '%m/%d/%Y %H:%M:%S'))
         end_new_session = local.localize(datetime.strptime(str(end_from_form), '%m/%d/%Y %H:%M:%S'))
-        if MovieSession.objects.all() and (MovieSession.objects.filter(hall=form.data['hall'])):
-            for obj in (MovieSession.objects.filter(hall=form.data['hall'])):
-                start_from_object = local.localize(datetime.strptime(str(obj.time_from), '%Y-%m-%d %H:%M:%S'))
-                end_from_object = local.localize(datetime.strptime(str(obj.time_to), '%Y-%m-%d %H:%M:%S'))
 
-                if ((start_new_session >= start_from_object) and (start_new_session <= end_from_object)) or (
-                        (end_new_session >= start_from_object) and (end_new_session <= end_from_object)):
-                    return HttpResponse('Not relevant data')
-                else:
-                    self.object = form.save()
-                    return super().form_valid(form)
-        else:
-            self.object = form.save()
-            return super().form_valid(form)
+        if end_new_session < start_new_session:
+            return HttpResponse('Session could not end before start')
+
+        if (start_new_session.date() >= film.display_date_start) and (end_new_session.date() <= film.display_date_end):
+            return super().post(request, *args, **kwargs)
+        return HttpResponse('Session could not be created because session and movie dates do not match')
+
+        # print(film)
+        # print(film)
+        # return HttpResponse('Not relevant data')
 
 
 class MoviesListView(ListView):
@@ -188,7 +178,6 @@ class MovieSessionsListView(ListView):
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(object_list=object_list, **kwargs)
         now = timezone.now()
-        # on main page all sessions for the future
         today = MovieSession.objects.filter(time_from__gte=now)
         sort = self.request.GET.getlist('sort')
         if sort:
@@ -197,25 +186,8 @@ class MovieSessionsListView(ListView):
                         'sessions': today})
         return context
 
-    # def get_context_data(self, *, object_list=None, **kwargs):
-    #     context = super().get_context_data(object_list=object_list, **kwargs)
-    #     now = timezone.now()
-    #     # on main page all sessions for the future
-    #     today = MovieSession.objects.all()#filter(time_from__gte=now).order_by('time_from')
-    #     context.update({'amount': AmountForm,
-    #                     'sessions': today})
-    #     return context
-
-    # def get_queryset(self):
-    #     queryset = super().get_queryset()
-    #     sort = self.request.GET.getlist('sort')
-    #     if sort:
-    #         queryset = queryset.order_by(*sort)
-    #     return queryset
-
 
 class MovieSessionsListViewToday(MovieSessionsListView):
-
     """ Only sessions for current 24 hours"""
 
     def get_context_data(self, *, object_list=None, **kwargs):
@@ -229,10 +201,8 @@ class MovieSessionsListViewToday(MovieSessionsListView):
         return context
 
 
-
 class MovieSessionsListViewTomorrow(MovieSessionsListView):
-
-    """ Only sessions for current 24 hours"""
+    """ Only sessions for the next 24 hours after today"""
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(object_list=object_list, **kwargs)
@@ -258,10 +228,6 @@ class FilmSessionsUpdateView(UpdateView, LoginRequiredMixin):
         else:
             raise PermissionDenied()
 
-    def get_object(self):
-        id_ = self.kwargs.get('id')
-        return get_object_or_404(MovieSession, id=id_)
-
 
 class BuyTicketView(CreateView, LoginRequiredMixin):
     template_name = 'cinema/buy_ticket.html'
@@ -285,6 +251,7 @@ class BuyTicketView(CreateView, LoginRequiredMixin):
             self.session = MovieSession.objects.get(id=kwargs.get("session_id"))
             return super().post(request, *args, **kwargs)
 
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!
     def form_valid(self, form):
         obj = form.save(commit=False)
         obj.buyer = self.request.user
@@ -298,7 +265,7 @@ class BuyTicketView(CreateView, LoginRequiredMixin):
             return HttpResponseRedirect(reverse('session-list'))
         obj.buy(price=self.session.price, quantity=self.request.POST.get('amount'), session=self.session)
         obj.save()
-        messages.info(self.request, "You've successfully bought staff")
+        messages.info(self.request, "You've successfully bought ticket")
         return HttpResponseRedirect(self.success_url)
 
 
@@ -313,12 +280,6 @@ class BuyingList(ListView, LoginRequiredMixin):
         else:
             return super().get(request, *args, **kwargs)
 
-    # def get_queryset(self):
-    #     if not self.request.user.is_superuser:
-    #         queryset = Ticket.objects.filter(buyer_id=self.request.user.id)
-    #         return queryset
-    #     return super().get_queryset()
-
     def get_context_data(self, **kwargs):
         kwargs = super(BuyingList, self).get_context_data(**kwargs)
         kwargs.update({
@@ -328,35 +289,3 @@ class BuyingList(ListView, LoginRequiredMixin):
             # 'taskd_list': TaskD.objects.all(), tt.objects.aggregate(total_likes=Sum('tt_like'))
         })
         return kwargs
-
-    # def get_context_data(self, *, object_list=None, **kwargs):
-    #     context = super().get_context_data(object_list=None, **kwargs)
-    #     context.update(
-    #         {'comment_create_form': CreateCommentForm,
-    #          'comment_update_form': UpdateCommentForm})
-    #     return context
-
-
-'''
-class HallCreateView(CreateView, LoginRequiredMixin):
-    template_name = 'cinema/'
-
-class HallCreateView(AdminTestMixin, CreateView):
-
-    model = Hall
-    fields = ('name', 'seats', )
-    template_name = 'halls/hall/create.html'
-
-    def get_success_url(self):
-        messages.add_message(self.request, messages.SUCCESS, f'The hall was created!')
-        return reverse_lazy('halls:hall-list')
-
-class ProductCreate(AdminAccess, CreateView):
-    """ product create form page '/product_create/' """
-    template_name = 'shop/product/create_form.html'
-    success_url = '/product_create/'
-    form_class = forms.ProductCreateForm
-    model = models.Product
-    success_message = 'success crate product %(name)s'
-'''
-

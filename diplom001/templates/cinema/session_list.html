@@ -33,7 +33,7 @@
             <p>Price: {{ session.price }}</p>
             <p>From: {{ session.time_from }}</p>
             <p>To: {{ session.time_to }}</p>
-            <hr>
+
 
             {% if request.user.is_superuser %}
                 <a style="color: red" href={% url 'update_session' session.id %}>Update this session</a>
@@ -45,6 +45,7 @@
                 <input type="submit" value="buy">
 
                 </form>
+            <hr>
             {% endif %}
 
 

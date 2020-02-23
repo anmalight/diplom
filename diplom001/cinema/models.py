@@ -1,7 +1,7 @@
-from django.core.checks import messages
 from django.db import models
 
 # Create your models here.
+
 from authentication.models import User
 
 
@@ -27,10 +27,6 @@ class CinemaHall(models.Model):
     def __str__(self):
         return self.name
 
-    def update_permission(self):
-        hall_sessions = self.sessions.all()
-        return all(not s.tickets.all() for s in hall_sessions)
-
 
 class MovieSession(models.Model):
     film = models.ForeignKey(Movie, related_name='sessions', on_delete=models.CASCADE)
@@ -41,6 +37,9 @@ class MovieSession(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
     available_seats = models.PositiveIntegerField(blank=True)
+
+    def __str__(self):
+        return f"Movie session of film '{self.film.name}' at {self.hall.name} hall"
 
 
 class Ticket(models.Model):
