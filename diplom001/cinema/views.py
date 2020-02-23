@@ -133,21 +133,15 @@ class SessionCreateView(CreateView, LoginRequiredMixin):
         start_new_session = local.localize(datetime.strptime(str(start_from_form), '%m/%d/%Y %H:%M:%S'))
         end_new_session = local.localize(datetime.strptime(str(end_from_form), '%m/%d/%Y %H:%M:%S'))
 
-        if end_new_session < start_new_session:
-            messages.error(self.request, "Session could not end before start")
+        for h in hall_sessions:
+            if end_new_session < start_new_session:
+                messages.error(self.request, "Session could not end before start")
+                return HttpResponseRedirect(reverse('add_session'))
+
+            if (start_new_session.date() >= film.display_date_start) and (end_new_session.date() <= film.display_date_end):
+                return super().post(request, *args, **kwargs)
+            messages.error(self.request, 'Session could not be created because session and movie dates do not match')
             return HttpResponseRedirect(reverse('add_session'))
-            # return HttpResponse('Session could not end before start')
-
-        if (start_new_session.date() >= film.display_date_start) and (end_new_session.date() <= film.display_date_end):
-            return super().post(request, *args, **kwargs)
-        messages.error(self.request, 'Session could not be created because session and movie dates do not match')
-        return HttpResponseRedirect(reverse('add_session'))
-
-        # return HttpResponse('Session could not be created because session and movie dates do not match')
-
-        # print(film)
-        # print(film)
-        # return HttpResponse('Not relevant data')
 
 
 class MoviesListView(ListView):
@@ -162,7 +156,7 @@ class MoviesListView(ListView):
             raise PermissionDenied()
 
 
-class MovieSListView(ListView):
+class CinemaHallListView(ListView):
     model = CinemaHall
     context_object_name = 'cinema_halls'
     template_name = 'cinema/cinema_halls_list.html'
@@ -177,7 +171,7 @@ class MovieSListView(ListView):
 class MovieSessionsListView(ListView):
     """ main page. all sessions that are elder then current time"""
     model = MovieSession
-    # context_object_name = 'sessions'
+    context_object_name = 'sessions'
     template_name = 'cinema/session_list.html'
 
     def get_context_data(self, *, object_list=None, **kwargs):
@@ -224,7 +218,7 @@ class FilmSessionsUpdateView(UpdateView, LoginRequiredMixin):
     template_name = 'cinema/session_update.html'
     form_class = AddMovieSessionForm
     success_url = '/'
-    # model = MovieSession
+    model = MovieSession
     queryset = MovieSession.objects.all()
 
     def get(self, request, *args, **kwargs):
@@ -232,6 +226,26 @@ class FilmSessionsUpdateView(UpdateView, LoginRequiredMixin):
             return super().get(request, *args, **kwargs)
         else:
             raise PermissionDenied()
+
+    def post(self, request, *args, **kwargs):
+        local = pytz.timezone('Europe/Kiev')
+        film = Movie.objects.get(id=int(request.POST.get('film')))
+        hall = request.POST.get('hall')
+        hall_sessions = MovieSession.objects.filter(hall__id=int(hall))
+        start_from_form = (request.POST.get('time_from'))
+        end_from_form = (request.POST.get('time_to'))
+
+        start_new_session = local.localize(datetime.strptime(str(start_from_form), '%d/%m/%Y %H:%M:%S'))
+        end_new_session = local.localize(datetime.strptime(str(end_from_form), '%d/%m/%Y %H:%M:%S'))
+
+        if end_new_session < start_new_session:
+            messages.error(self.request, "Updated session could not end before start")
+            return HttpResponseRedirect(reverse('add_session'))
+
+        if (start_new_session.date() >= film.display_date_start) and (end_new_session.date() <= film.display_date_end):
+            return super().post(request, *args, **kwargs)
+        messages.error(self.request, 'Session could not be updated because session and movie dates do not match')
+        return HttpResponseRedirect(reverse('add_session'))
 
 
 class BuyTicketView(CreateView, LoginRequiredMixin):
