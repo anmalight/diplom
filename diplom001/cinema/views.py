@@ -134,11 +134,16 @@ class SessionCreateView(CreateView, LoginRequiredMixin):
         end_new_session = local.localize(datetime.strptime(str(end_from_form), '%m/%d/%Y %H:%M:%S'))
 
         if end_new_session < start_new_session:
-            return HttpResponse('Session could not end before start')
+            messages.error(self.request, "Session could not end before start")
+            return HttpResponseRedirect(reverse('add_session'))
+            # return HttpResponse('Session could not end before start')
 
         if (start_new_session.date() >= film.display_date_start) and (end_new_session.date() <= film.display_date_end):
             return super().post(request, *args, **kwargs)
-        return HttpResponse('Session could not be created because session and movie dates do not match')
+        messages.error(self.request, 'Session could not be created because session and movie dates do not match')
+        return HttpResponseRedirect(reverse('add_session'))
+
+        # return HttpResponse('Session could not be created because session and movie dates do not match')
 
         # print(film)
         # print(film)
