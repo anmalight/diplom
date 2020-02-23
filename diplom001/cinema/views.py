@@ -130,18 +130,30 @@ class SessionCreateView(CreateView, LoginRequiredMixin):
         start_from_form = (request.POST.get('time_from'))
         end_from_form = (request.POST.get('time_to'))
 
-        start_new_session = local.localize(datetime.strptime(str(start_from_form), '%m/%d/%Y %H:%M:%S'))
-        end_new_session = local.localize(datetime.strptime(str(end_from_form), '%m/%d/%Y %H:%M:%S'))
-
-
-        if end_new_session < start_new_session:
+        if end_from_form < start_from_form:
             messages.error(self.request, "Session could not end before start")
             return HttpResponseRedirect(reverse('add_session'))
 
-        if (start_new_session.date() >= film.display_date_start) and (end_new_session.date() <= film.display_date_end):
-            return super().post(request, *args, **kwargs)
+        start_new_session = local.localize(datetime.strptime(str(start_from_form), '%m/%d/%Y %H:%M:%S'))
+        end_new_session = local.localize(datetime.strptime(str(end_from_form), '%m/%d/%Y %H:%M:%S'))
+
+        for h in hall_sessions:
+            start = local.localize(
+                datetime.strptime(str(h.time_from), '%Y-%m-%d %H:%M:%S'))  # .start_at), '%Y-%m-%d %H:%M:%S'))
+            end = local.localize(datetime.strptime(str(h.time_to), '%Y-%m-%d %H:%M:%S'))
+
+            if (start_new_session.date() > film.display_date_start) and (
+                    end_new_session.date() < film.display_date_end):
+                if ((start_new_session < start) and (start_new_session < end)) or (
+                        (end_new_session > start) and (end_new_session > end)):
+                    return super().post(request, *args, **kwargs)
+                    # return HttpResponse('N 1')
+                else:
+                    messages.error(self.request,
+                                   'Session could not be created because on not relevant date or time')
+                    return HttpResponseRedirect(reverse('session-list'))
         messages.error(self.request, 'Session could not be created because session and movie dates do not match')
-        return HttpResponseRedirect(reverse('add_session'))
+        return HttpResponseRedirect(reverse('session-list'))
 
 
 class MoviesListView(ListView):
@@ -234,6 +246,11 @@ class FilmSessionsUpdateView(UpdateView, LoginRequiredMixin):
         hall_sessions = MovieSession.objects.filter(hall__id=int(hall))
         start_from_form = (request.POST.get('time_from'))
         end_from_form = (request.POST.get('time_to'))
+        movie = MovieSession.objects.get(pk=kwargs.get('pk'))
+
+        if len(movie.tickets.all()) >=1:
+            messages.error(self.request, "Tickets were already solt")
+            return HttpResponseRedirect(reverse('session-list'))
 
         if end_from_form < start_from_form:
             messages.error(self.request, "Session could not end before start")
@@ -243,12 +260,14 @@ class FilmSessionsUpdateView(UpdateView, LoginRequiredMixin):
         end_new_session = local.localize(datetime.strptime(str(end_from_form), '%m/%d/%Y %H:%M:%S'))
 
         for h in hall_sessions:
-            start = local.localize(datetime.strptime(str(h.time_from), '%Y-%m-%d %H:%M:%S')) #.start_at), '%Y-%m-%d %H:%M:%S'))
+            start = local.localize(
+                datetime.strptime(str(h.time_from), '%Y-%m-%d %H:%M:%S'))  # .start_at), '%Y-%m-%d %H:%M:%S'))
             end = local.localize(datetime.strptime(str(h.time_to), '%Y-%m-%d %H:%M:%S'))
 
             if (start_new_session.date() > film.display_date_start) and (
                     end_new_session.date() < film.display_date_end):
-                if ((start_new_session < start) and (start_new_session < end)) or ((end_new_session > start) and (end_new_session > end)):
+                if ((start_new_session < start) and (start_new_session < end)) or (
+                        (end_new_session > start) and (end_new_session > end)):
                     return super().post(request, *args, **kwargs)
                     # return HttpResponse('N 1')
                 else:
@@ -295,7 +314,7 @@ class BuyTicketView(CreateView, LoginRequiredMixin):
             return HttpResponseRedirect(reverse('session-list'))
         obj.buy(price=self.session.price, quantity=self.request.POST.get('amount'), session=self.session)
         obj.save()
-        messages.info(self.request, "You've successfully bought ticket")
+        # messages.info(self.request, "You've successfully bought ticket")
         return HttpResponseRedirect(self.success_url)
 
 
