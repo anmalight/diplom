@@ -3,21 +3,23 @@ import datetime
 import pytz
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.db.migrations import serializer
 from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone  #
 from django.views.generic import ListView, CreateView, UpdateView, View
 from django.core.exceptions import PermissionDenied, FieldError
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.response import Response
 
 from authentication.models import User
 from cinema.forms import AddMovieSessionForm, AmountForm, AddMovieForm, AddHallForm
 from cinema.models import MovieSession, Movie, CinemaHall, Ticket
 # Create your views here.
 from cinema.api.serializers import GoodSerializer, UserSerializer, MovieSerializer, MovieSessionSerializer, \
-    CinemaHallSerializer
+    CinemaHallSerializer, TicketSerializer
 from datetime import datetime
 
 
@@ -29,41 +31,54 @@ class MovieViewApi(viewsets.ModelViewSet):
     serializer_class = MovieSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminUser]
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        sort = self.request.GET.getlist('sort')
-        if sort:
-            queryset = queryset.order_by(*sort)
-        return queryset
-
-
-class MovieSessionViewApi(viewsets.ModelViewSet):
-    queryset = MovieSession.objects.all()
-    serializer_class = MovieSessionSerializer
-
-    def get_queryset(self):
-        time_end = datetime.datetime.strptime(self.request.GET.get('time_end'), "%H:%M:%S")
-
-    # def create(self, request, *args, **kwargs):
-    #     pass
-    #
-    # def update(self, request, *args, **kwargs):
-    #     pass
-    #
-    # def destroy(self,  request, *args, **kwargs):
-    #     pass
+    def destroy(self,  request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CinemaHallViewApi(viewsets.ModelViewSet):
     queryset = CinemaHall.objects.all()
     serializer_class = CinemaHallSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsAdminUser]
+
+    def update(self, request, *args, **kwargs):
+        hall = request.POST.get('hall')
+        movie = MovieSession.objects.get(pk=kwargs.get('pk'))
+        print(movie)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if len(movie.tickets.all()) >= 1:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class GoodViewSet(viewsets.ModelViewSet):
+class MovieSessionViewApi(viewsets.ModelViewSet):
     queryset = MovieSession.objects.all()
-    serializer_class = GoodSerializer
-    # permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    serializer_class = MovieSessionSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminUser]
+
+    def destroy(self,  request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TicketSerializerViewApi(viewsets.ModelViewSet):
+    queryset = Ticket.objects.all()
+    serializer_class = TicketSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def destroy(self,  request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # def perform_create(self, serializer):
     #     print(self.request.user)
@@ -243,13 +258,13 @@ class FilmSessionsUpdateView(UpdateView, LoginRequiredMixin):
         local = pytz.timezone('Europe/Kiev')
         film = Movie.objects.get(id=int(request.POST.get('film')))
         hall = request.POST.get('hall')
-        hall_sessions = MovieSession.objects.filter(hall__id=int(hall))
+        hall_sessions = MovieSession.objects.filter(hall__id=hall)
         start_from_form = (request.POST.get('time_from'))
         end_from_form = (request.POST.get('time_to'))
         movie = MovieSession.objects.get(pk=kwargs.get('pk'))
 
         if len(movie.tickets.all()) >=1:
-            messages.error(self.request, "Tickets were already solt")
+            messages.error(self.request, "Tickets were already sold")
             return HttpResponseRedirect(reverse('session-list'))
 
         if end_from_form < start_from_form:
@@ -258,10 +273,10 @@ class FilmSessionsUpdateView(UpdateView, LoginRequiredMixin):
 
         start_new_session = local.localize(datetime.strptime(str(start_from_form), '%m/%d/%Y %H:%M:%S'))
         end_new_session = local.localize(datetime.strptime(str(end_from_form), '%m/%d/%Y %H:%M:%S'))
-
+        # if MovieSession.objects.all() and (MovieSession.objects.filter(hall_id=hall)):
         for h in hall_sessions:
             start = local.localize(
-                datetime.strptime(str(h.time_from), '%Y-%m-%d %H:%M:%S'))  # .start_at), '%Y-%m-%d %H:%M:%S'))
+                datetime.strptime(str(h.time_from), '%Y-%m-%d %H:%M:%S'))
             end = local.localize(datetime.strptime(str(h.time_to), '%Y-%m-%d %H:%M:%S'))
 
             if (start_new_session.date() > film.display_date_start) and (
@@ -270,10 +285,11 @@ class FilmSessionsUpdateView(UpdateView, LoginRequiredMixin):
                         (end_new_session > start) and (end_new_session > end)):
                     return super().post(request, *args, **kwargs)
                     # return HttpResponse('N 1')
-                else:
-                    messages.error(self.request,
-                                   'Session could not be updated because on not relevant date or time')
-                    return HttpResponseRedirect(reverse('session-list'))
+
+                messages.error(self.request,
+                               'Session could not be updated because on not relevant date or time')
+                print(7)
+                return HttpResponseRedirect(reverse('session-list'))
         messages.error(self.request, 'Session could not be updated because session and movie dates do not match')
         return HttpResponseRedirect(reverse('session-list'))
 
@@ -314,7 +330,6 @@ class BuyTicketView(CreateView, LoginRequiredMixin):
             return HttpResponseRedirect(reverse('session-list'))
         obj.buy(price=self.session.price, quantity=self.request.POST.get('amount'), session=self.session)
         obj.save()
-        # messages.info(self.request, "You've successfully bought ticket")
         return HttpResponseRedirect(self.success_url)
 
 

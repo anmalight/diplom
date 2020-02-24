@@ -17,15 +17,15 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from cinema.views import GoodViewSet, UserViewSet, MovieViewApi, MovieSessionViewApi
+from cinema.views import UserViewSet, MovieViewApi, MovieSessionViewApi, CinemaHallViewApi, \
+    TicketSerializerViewApi
 from diplom001 import settings
 
 router = DefaultRouter()
 router.register(r'moviee', MovieViewApi)
 router.register(r'movieesession', MovieSessionViewApi)
-
-
-router.register(r'session', GoodViewSet)
+router.register(r'movieehall', CinemaHallViewApi)
+router.register(r'tickett', TicketSerializerViewApi)
 router.register(r'user', UserViewSet)
 
 
